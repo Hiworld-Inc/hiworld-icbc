@@ -11,9 +11,11 @@ class RSA
         }
         $res = openssl_get_privatekey($privateKey);
         if (!$res) {
-            throw new \Exception("Private Key Error:" . openssl_error_string());
+            throw new \Exception("Private Key Error: " . openssl_error_string());
         }
-        openssl_sign($data, $sign, $res, OPENSSL_ALGO_SHA1);
+        if (!openssl_sign($data, $sign, $res, OPENSSL_ALGO_SHA1)) {
+            throw new \Exception("Sign Error: " . openssl_error_string());
+        }
         return base64_encode($sign);
     }
 
@@ -24,9 +26,11 @@ class RSA
         }
         $res = openssl_get_privatekey($privateKey);
         if (!$res) {
-            throw new \Exception("Private Key Error:" . openssl_error_string());
+            throw new \Exception("Private Key Error: " . openssl_error_string());
         }
-        openssl_sign($data, $sign, $res, OPENSSL_ALGO_SHA256);
+        if (!openssl_sign($data, $sign, $res, OPENSSL_ALGO_SHA256)) {
+            throw new \Exception("Sign Error: " . openssl_error_string());
+        }
         return base64_encode($sign);
     }
 
@@ -37,9 +41,12 @@ class RSA
         }
         $res = openssl_get_publickey($publicKey);
         if (!$res) {
-            throw new \Exception("Public Key Error:" . openssl_error_string());
+            throw new \Exception("Public Key Error: " . openssl_error_string());
         }
         $result = openssl_verify($data, base64_decode($sign), $res, OPENSSL_ALGO_SHA1);
+        if ($result === -1) {
+            throw new \Exception("Verify Error: " . openssl_error_string());
+        }
         return $result === 1;
     }
 
@@ -50,9 +57,12 @@ class RSA
         }
         $res = openssl_get_publickey($publicKey);
         if (!$res) {
-            throw new \Exception("Public Key Error:" . openssl_error_string());
+            throw new \Exception("Public Key Error: " . openssl_error_string());
         }
         $result = openssl_verify($data, base64_decode($sign), $res, OPENSSL_ALGO_SHA256);
+        if ($result === -1) {
+            throw new \Exception("Verify Error: " . openssl_error_string());
+        }
         return $result === 1;
     }
 
