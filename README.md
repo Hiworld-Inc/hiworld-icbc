@@ -5,7 +5,7 @@
 ## 安装
 
 ```bash
-composer require your-vendor/laravel-icbc-sdk
+composer require hiworld/laravel-icbc
 ```
 
 ## 配置
