@@ -11,10 +11,10 @@ return [
     'app_id' => env('ICBC_APP_ID', ''),
 
     // 商户私钥
-    'private_key' => env('ICBC_PRIVATE_KEY', ''),
+    'private_key' => env('ICBC_PRIVATE_KEY', dirname(__DIR__) . '/private.pem'),
 
     // ICBC公钥
-    'icbc_public_key' => env('ICBC_PUBLIC_KEY', ''),
+    'icbc_public_key' => env('ICBC_PUBLIC_KEY', dirname(__DIR__) . '/public.pem'),
 
     // 签名方式: RSA/RSA2/SM2/CA
     'sign_type' => env('ICBC_SIGN_TYPE', 'RSA2'),
