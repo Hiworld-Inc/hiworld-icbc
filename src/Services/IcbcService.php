@@ -27,6 +27,92 @@ class IcbcService
     }
 
     /**
+     * 支付接口
+     *
+     * @param array $params 支付参数
+     * @return string
+     */
+    public function pay(array $params)
+    {
+        $request = [
+            'method' => 'POST',
+            'api' => '/api/cardbusiness/aggregatepay/b2c/online/consumepurchase/V1',
+            'biz_content' => array_merge([
+                'mer_id' => $this->config['app_id'],
+                'timestamp' => date('YmdHis'),
+                'currency' => 'CNY',
+            ], $params),
+            'isNeedEncrypt' => false
+        ];
+
+        return $this->execute($request, uniqid());
+    }
+
+    /**
+     * 订单查询
+     *
+     * @param array $params 查询参数
+     * @return string
+     */
+    public function query(array $params)
+    {
+        $request = [
+            'method' => 'POST',
+            'api' => '/api/cardbusiness/aggregatepay/b2c/online/orderqry/V1',
+            'biz_content' => array_merge([
+                'mer_id' => $this->config['app_id'],
+                'timestamp' => date('YmdHis'),
+            ], $params),
+            'isNeedEncrypt' => false
+        ];
+
+        return $this->execute($request, uniqid());
+    }
+
+    /**
+     * 退款
+     *
+     * @param array $params 退款参数
+     * @return string
+     */
+    public function refund(array $params)
+    {
+        $request = [
+            'method' => 'POST',
+            'api' => '/api/cardbusiness/aggregatepay/b2c/online/merrefund/V1',
+            'biz_content' => array_merge([
+                'mer_id' => $this->config['app_id'],
+                'timestamp' => date('YmdHis'),
+                'currency' => 'CNY',
+            ], $params),
+            'isNeedEncrypt' => false
+        ];
+
+        return $this->execute($request, uniqid());
+    }
+
+    /**
+     * 订单撤销
+     *
+     * @param array $params 撤销参数
+     * @return string
+     */
+    public function cancel(array $params)
+    {
+        $request = [
+            'method' => 'POST',
+            'api' => '/api/mybankpay/cpaycp/preservation/cancel/V2',
+            'biz_content' => array_merge([
+                'mer_id' => $this->config['app_id'],
+                'timestamp' => date('YmdHis'),
+            ], $params),
+            'isNeedEncrypt' => false
+        ];
+
+        return $this->execute($request, uniqid());
+    }
+
+    /**
      * 执行API请求
      *
      * @param array $request 请求参数
