@@ -34,6 +34,21 @@ class IcbcService
      */
     protected function formatPrivateKey($privateKey)
     {
+        // 如果是文件路径，则读取文件内容
+        if (file_exists($privateKey)) {
+            $privateKey = file_get_contents($privateKey);
+        }
+
+        // 如果已经是PEM格式，直接返回
+        if (strpos($privateKey, '-----BEGIN RSA PRIVATE KEY-----') !== false) {
+            return $privateKey;
+        }
+
+        // 如果是PKCS#8格式，直接返回
+        if (strpos($privateKey, '-----BEGIN PRIVATE KEY-----') !== false) {
+            return $privateKey;
+        }
+
         // 移除所有空白字符
         $privateKey = preg_replace('/\s+/', '', $privateKey);
         
@@ -41,10 +56,27 @@ class IcbcService
         $privateKey = preg_replace('/-+BEGIN.*KEY-+/', '', $privateKey);
         $privateKey = preg_replace('/-+END.*KEY-+/', '', $privateKey);
 
-        // 重新格式化为标准 PEM 格式
-        return "-----BEGIN PRIVATE KEY-----\n" .
+        // 尝试 PKCS#8 格式
+        $pem = "-----BEGIN PRIVATE KEY-----\n" .
             chunk_split($privateKey, 64, "\n") .
             "-----END PRIVATE KEY-----";
+
+        // 验证格式
+        if (@openssl_pkey_get_private($pem)) {
+            return $pem;
+        }
+
+        // 尝试 RSA 格式
+        $pem = "-----BEGIN RSA PRIVATE KEY-----\n" .
+            chunk_split($privateKey, 64, "\n") .
+            "-----END RSA PRIVATE KEY-----";
+
+        // 验证格式
+        if (@openssl_pkey_get_private($pem)) {
+            return $pem;
+        }
+
+        throw new \Exception('Invalid private key format');
     }
 
     /**
@@ -55,6 +87,16 @@ class IcbcService
      */
     protected function formatPublicKey($publicKey)
     {
+        // 如果是文件路径，则读取文件内容
+        if (file_exists($publicKey)) {
+            $publicKey = file_get_contents($publicKey);
+        }
+
+        // 如果已经是PEM格式，直接返回
+        if (strpos($publicKey, '-----BEGIN PUBLIC KEY-----') !== false) {
+            return $publicKey;
+        }
+
         // 移除所有空白字符
         $publicKey = preg_replace('/\s+/', '', $publicKey);
         
@@ -62,10 +104,17 @@ class IcbcService
         $publicKey = preg_replace('/-+BEGIN.*KEY-+/', '', $publicKey);
         $publicKey = preg_replace('/-+END.*KEY-+/', '', $publicKey);
 
-        // 重新格式化为标准 PEM 格式
-        return "-----BEGIN PUBLIC KEY-----\n" .
+        // 格式化为 PEM 格式
+        $pem = "-----BEGIN PUBLIC KEY-----\n" .
             chunk_split($publicKey, 64, "\n") .
             "-----END PUBLIC KEY-----";
+
+        // 验证格式
+        if (!@openssl_pkey_get_public($pem)) {
+            throw new \Exception('Invalid public key format');
+        }
+
+        return $pem;
     }
 
     /**
