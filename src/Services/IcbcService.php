@@ -31,22 +31,38 @@ class IcbcService
      *
      * @param string $privateKey
      * @return string
+     * @throws \Exception
      */
     protected function formatPrivateKey($privateKey)
     {
+        if (empty($privateKey)) {
+            throw new \Exception('Private key cannot be empty');
+        }
+
         // 如果是文件路径，则读取文件内容
         if (file_exists($privateKey)) {
             $privateKey = file_get_contents($privateKey);
+            if ($privateKey === false) {
+                throw new \Exception('Failed to read private key file');
+            }
         }
 
         // 如果已经是PEM格式，直接返回
         if (strpos($privateKey, '-----BEGIN RSA PRIVATE KEY-----') !== false) {
-            return $privateKey;
+            $res = @openssl_pkey_get_private($privateKey);
+            if ($res) {
+                openssl_pkey_free($res);
+                return $privateKey;
+            }
         }
 
         // 如果是PKCS#8格式，直接返回
         if (strpos($privateKey, '-----BEGIN PRIVATE KEY-----') !== false) {
-            return $privateKey;
+            $res = @openssl_pkey_get_private($privateKey);
+            if ($res) {
+                openssl_pkey_free($res);
+                return $privateKey;
+            }
         }
 
         // 移除所有空白字符
@@ -56,13 +72,19 @@ class IcbcService
         $privateKey = preg_replace('/-+BEGIN.*KEY-+/', '', $privateKey);
         $privateKey = preg_replace('/-+END.*KEY-+/', '', $privateKey);
 
+        // 确保是有效的 base64
+        if (!preg_match('/^[a-zA-Z0-9\/+]*={0,2}$/', $privateKey)) {
+            throw new \Exception('Private key is not a valid base64 string');
+        }
+
         // 尝试 PKCS#8 格式
         $pem = "-----BEGIN PRIVATE KEY-----\n" .
             chunk_split($privateKey, 64, "\n") .
             "-----END PRIVATE KEY-----";
 
-        // 验证格式
-        if (@openssl_pkey_get_private($pem)) {
+        $res = @openssl_pkey_get_private($pem);
+        if ($res) {
+            openssl_pkey_free($res);
             return $pem;
         }
 
@@ -71,12 +93,19 @@ class IcbcService
             chunk_split($privateKey, 64, "\n") .
             "-----END RSA PRIVATE KEY-----";
 
-        // 验证格式
-        if (@openssl_pkey_get_private($pem)) {
+        $res = @openssl_pkey_get_private($pem);
+        if ($res) {
+            openssl_pkey_free($res);
             return $pem;
         }
 
-        throw new \Exception('Invalid private key format');
+        // 获取 OpenSSL 错误信息
+        $errors = [];
+        while ($error = openssl_error_string()) {
+            $errors[] = $error;
+        }
+
+        throw new \Exception('Invalid private key format. OpenSSL errors: ' . implode('; ', $errors));
     }
 
     /**
@@ -84,17 +113,29 @@ class IcbcService
      *
      * @param string $publicKey
      * @return string
+     * @throws \Exception
      */
     protected function formatPublicKey($publicKey)
     {
+        if (empty($publicKey)) {
+            throw new \Exception('Public key cannot be empty');
+        }
+
         // 如果是文件路径，则读取文件内容
         if (file_exists($publicKey)) {
             $publicKey = file_get_contents($publicKey);
+            if ($publicKey === false) {
+                throw new \Exception('Failed to read public key file');
+            }
         }
 
         // 如果已经是PEM格式，直接返回
         if (strpos($publicKey, '-----BEGIN PUBLIC KEY-----') !== false) {
-            return $publicKey;
+            $res = @openssl_pkey_get_public($publicKey);
+            if ($res) {
+                openssl_pkey_free($res);
+                return $publicKey;
+            }
         }
 
         // 移除所有空白字符
@@ -104,15 +145,26 @@ class IcbcService
         $publicKey = preg_replace('/-+BEGIN.*KEY-+/', '', $publicKey);
         $publicKey = preg_replace('/-+END.*KEY-+/', '', $publicKey);
 
+        // 确保是有效的 base64
+        if (!preg_match('/^[a-zA-Z0-9\/+]*={0,2}$/', $publicKey)) {
+            throw new \Exception('Public key is not a valid base64 string');
+        }
+
         // 格式化为 PEM 格式
         $pem = "-----BEGIN PUBLIC KEY-----\n" .
             chunk_split($publicKey, 64, "\n") .
             "-----END PUBLIC KEY-----";
 
-        // 验证格式
-        if (!@openssl_pkey_get_public($pem)) {
-            throw new \Exception('Invalid public key format');
+        $res = @openssl_pkey_get_public($pem);
+        if (!$res) {
+            // 获取 OpenSSL 错误信息
+            $errors = [];
+            while ($error = openssl_error_string()) {
+                $errors[] = $error;
+            }
+            throw new \Exception('Invalid public key format. OpenSSL errors: ' . implode('; ', $errors));
         }
+        openssl_pkey_free($res);
 
         return $pem;
     }
