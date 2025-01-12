@@ -42,6 +42,6 @@ return [
 
     // API 网关
     'gateway' => env('ICBC_GATEWAY', env('ICBC_SANDBOX', false) 
-        ? 'https://apipcs3.dccnet.com.cn'  // 测试环境网关
+        ? 'https://apipcs.dccnet.com.cn'  // 测试环境网关
         : 'https://gw.open.icbc.com.cn'),  // 生产环境网关
 ]; 
