@@ -54,41 +54,18 @@ class IcbcService
         // 清理密钥内容
         $privateKey = $this->cleanKeyContent($privateKey);
 
-        // 如果已经是 PEM 格式，尝试直接验证
+        // 如果已经是 PEM 格式，直接返回
         if (strpos($privateKey, '-----BEGIN') !== false) {
-            $res = @openssl_pkey_get_private($privateKey);
-            if ($res) {
-                openssl_pkey_free($res);
-                return $privateKey;
-            }
+            return $privateKey;
         }
-
-        // 尝试不同的密钥格式
-        $formats = [
-            ["-----BEGIN PRIVATE KEY-----\n", "\n-----END PRIVATE KEY-----"],
-            ["-----BEGIN RSA PRIVATE KEY-----\n", "\n-----END RSA PRIVATE KEY-----"],
-            ["-----BEGIN ENCRYPTED PRIVATE KEY-----\n", "\n-----END ENCRYPTED PRIVATE KEY-----"]
-        ];
 
         // 移除所有非 base64 字符
         $privateKey = preg_replace('/[^A-Za-z0-9+\/=]/', '', $privateKey);
 
-        foreach ($formats as $format) {
-            $pem = $format[0] . chunk_split($privateKey, 64, "\n") . $format[1];
-            $res = @openssl_pkey_get_private($pem);
-            if ($res) {
-                openssl_pkey_free($res);
-                return $pem;
-            }
-        }
-
-        // 如果所有尝试都失败，记录错误并抛出异常
-        $errors = [];
-        while ($error = openssl_error_string()) {
-            $errors[] = $error;
-        }
-
-        throw new \Exception('Invalid private key format. OpenSSL errors: ' . implode('; ', $errors));
+        // 添加 PEM 格式头尾
+        return "-----BEGIN PRIVATE KEY-----\n" .
+            chunk_split($privateKey, 64, "\n") .
+            "-----END PRIVATE KEY-----";
     }
 
     /**
@@ -115,35 +92,22 @@ class IcbcService
         // 清理密钥内容
         $publicKey = $this->cleanKeyContent($publicKey);
 
-        // 如果已经是 PEM 格式，尝试直接验证
-        if (strpos($publicKey, '-----BEGIN PUBLIC KEY-----') !== false) {
-            $res = @openssl_pkey_get_public($publicKey);
-            if ($res) {
-                openssl_pkey_free($res);
-                return $publicKey;
+        // 如果已经是 PEM 格式，需要确保是公钥格式
+        if (strpos($publicKey, '-----BEGIN') !== false) {
+            // 如果是私钥格式，转换为公钥格式
+            if (strpos($publicKey, 'PRIVATE KEY') !== false) {
+                $publicKey = preg_replace('/PRIVATE KEY/', 'PUBLIC KEY', $publicKey);
             }
+            return $publicKey;
         }
 
         // 移除所有非 base64 字符
         $publicKey = preg_replace('/[^A-Za-z0-9+\/=]/', '', $publicKey);
 
-        // 格式化为 PEM 格式
-        $pem = "-----BEGIN PUBLIC KEY-----\n" .
+        // 添加 PEM 格式头尾
+        return "-----BEGIN PUBLIC KEY-----\n" .
             chunk_split($publicKey, 64, "\n") .
             "-----END PUBLIC KEY-----";
-
-        $res = @openssl_pkey_get_public($pem);
-        if (!$res) {
-            // 获取 OpenSSL 错误信息
-            $errors = [];
-            while ($error = openssl_error_string()) {
-                $errors[] = $error;
-            }
-            throw new \Exception('Invalid public key format. OpenSSL errors: ' . implode('; ', $errors));
-        }
-        openssl_pkey_free($res);
-
-        return $pem;
     }
 
     /**
