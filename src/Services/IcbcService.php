@@ -40,11 +40,6 @@ class IcbcService
         // 移除现有的 PEM 头尾
         $privateKey = preg_replace('/-+BEGIN.*KEY-+/', '', $privateKey);
         $privateKey = preg_replace('/-+END.*KEY-+/', '', $privateKey);
-        
-        // 确保是有效的 base64
-        if (!$this->isValidBase64($privateKey)) {
-            throw new \Exception('Invalid private key format: Not a valid base64 string');
-        }
 
         // 重新格式化为标准 PEM 格式
         return "-----BEGIN PRIVATE KEY-----\n" .
@@ -66,43 +61,11 @@ class IcbcService
         // 移除现有的 PEM 头尾
         $publicKey = preg_replace('/-+BEGIN.*KEY-+/', '', $publicKey);
         $publicKey = preg_replace('/-+END.*KEY-+/', '', $publicKey);
-        
-        // 确保是有效的 base64
-        if (!$this->isValidBase64($publicKey)) {
-            throw new \Exception('Invalid public key format: Not a valid base64 string');
-        }
 
         // 重新格式化为标准 PEM 格式
         return "-----BEGIN PUBLIC KEY-----\n" .
             chunk_split($publicKey, 64, "\n") .
             "-----END PUBLIC KEY-----";
-    }
-
-    /**
-     * 检查字符串是否为有效的 base64 编码
-     *
-     * @param string $str
-     * @return bool
-     */
-    protected function isValidBase64($str)
-    {
-        if (empty($str)) {
-            return false;
-        }
-        
-        // 检查是否包含有效的 base64 字符
-        if (!preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $str)) {
-            return false;
-        }
-        
-        // 尝试解码
-        $decoded = base64_decode($str, true);
-        if ($decoded === false) {
-            return false;
-        }
-        
-        // 重新编码并比较
-        return base64_encode($decoded) === $str;
     }
 
     /**
