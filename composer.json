@@ -7,24 +7,14 @@
         "laravel/framework": "^8.0|^9.0|^10.0|^11.0",
         "ext-json": "*",
         "ext-openssl": "*",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "illuminate/support": "^8.0|^9.0|^10.0|^11.0"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
             "Hiworld\\LaravelIcbc\\": "src/"
-        },
-        "files": [
-            "../AES.php",
-            "../DefaultIcbcClient.php",
-            "../IcbcCa.php",
-            "../IcbcConstants.php",
-            "../IcbcEncrypt.php",
-            "../IcbcSignature.php",
-            "../RSA.php",
-            "../UiIcbcClient.php",
-            "../WebUtils.php"
-        ]
+        }
     },
     "authors": [
         {

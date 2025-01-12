@@ -2,7 +2,7 @@
 
 namespace Hiworld\LaravelIcbc\Services;
 
-use DefaultIcbcClient;
+use Hiworld\LaravelIcbc\lib\DefaultIcbcClient;
 
 class IcbcService
 {

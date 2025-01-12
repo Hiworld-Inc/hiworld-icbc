@@ -1,31 +1,72 @@
 <?php
 
-namespace IcbcSdk\lib;
+namespace Hiworld\LaravelIcbc\lib;
 
 class RSA
 {
-	public static function sign($data, $privateKey, $charset)
-	{
-		$privateKey = "-----BEGIN RSA PRIVATE KEY-----\n" .
-			wordwrap($privateKey, 64, "\n", true) .
-			"\n-----END RSA PRIVATE KEY-----";
-			
-		$key = openssl_get_privatekey($privateKey);
-		openssl_sign($data, $signature, $key, OPENSSL_ALGO_SHA1);
-		openssl_free_key($key);
-		return base64_encode($signature);
-	}
+    public static function sign($data, $privateKey, $charset)
+    {
+        if ($charset) {
+            $data = mb_convert_encoding($data, "UTF-8", $charset);
+        }
+        $res = openssl_get_privatekey($privateKey);
+        if (!$res) {
+            throw new \Exception("Private Key Error:" . openssl_error_string());
+        }
+        openssl_sign($data, $sign, $res, OPENSSL_ALGO_SHA1);
+        openssl_free_key($res);
+        return base64_encode($sign);
+    }
 
-	public static function verify($data, $publicKey, $charset, $sign)
-	{
-		$publicKey = "-----BEGIN PUBLIC KEY-----\n" .
-			wordwrap($publicKey, 64, "\n", true) .
-			"\n-----END PUBLIC KEY-----";
-			
-		$key = openssl_get_publickey($publicKey);
-		$result = openssl_verify($data, base64_decode($sign), $key, OPENSSL_ALGO_SHA1);
-		openssl_free_key($key);
-		return $result === 1;
-	}
-}
-?>
+    public static function sign256($data, $privateKey, $charset)
+    {
+        if ($charset) {
+            $data = mb_convert_encoding($data, "UTF-8", $charset);
+        }
+        $res = openssl_get_privatekey($privateKey);
+        if (!$res) {
+            throw new \Exception("Private Key Error:" . openssl_error_string());
+        }
+        openssl_sign($data, $sign, $res, OPENSSL_ALGO_SHA256);
+        openssl_free_key($res);
+        return base64_encode($sign);
+    }
+
+    public static function verify($data, $publicKey, $charset, $sign)
+    {
+        if ($charset) {
+            $data = mb_convert_encoding($data, "UTF-8", $charset);
+        }
+        $res = openssl_get_publickey($publicKey);
+        if (!$res) {
+            throw new \Exception("Public Key Error:" . openssl_error_string());
+        }
+        $result = openssl_verify($data, base64_decode($sign), $res, OPENSSL_ALGO_SHA1);
+        openssl_free_key($res);
+        return $result === 1;
+    }
+
+    public static function verify256($data, $publicKey, $charset, $sign)
+    {
+        if ($charset) {
+            $data = mb_convert_encoding($data, "UTF-8", $charset);
+        }
+        $res = openssl_get_publickey($publicKey);
+        if (!$res) {
+            throw new \Exception("Public Key Error:" . openssl_error_string());
+        }
+        $result = openssl_verify($data, base64_decode($sign), $res, OPENSSL_ALGO_SHA256);
+        openssl_free_key($res);
+        return $result === 1;
+    }
+
+    public static function signSM2($data, $privateKey, $charset)
+    {
+        throw new \Exception("SM2 Sign Not Supported");
+    }
+
+    public static function verifySM2($data, $publicKey, $charset, $sign)
+    {
+        throw new \Exception("SM2 Verify Not Supported");
+    }
+} 

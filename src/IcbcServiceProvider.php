@@ -4,6 +4,8 @@ namespace Hiworld\LaravelIcbc;
 
 use Illuminate\Support\ServiceProvider;
 use Hiworld\LaravelIcbc\Services\IcbcService;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Foundation\Application;
 
 class IcbcServiceProvider extends ServiceProvider
 {
@@ -33,10 +35,8 @@ class IcbcServiceProvider extends ServiceProvider
     public function boot()
     {
         // 发布配置文件
-        if (function_exists('config_path')) {
-            $this->publishes([
-                __DIR__.'/../config/icbc.php' => config_path('icbc.php'),
-            ], 'icbc-config');
-        }
+        $this->publishes([
+            __DIR__.'/../config/icbc.php' => config_path('icbc.php'),
+        ], 'icbc-config');
     }
 } 

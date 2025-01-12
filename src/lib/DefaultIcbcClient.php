@@ -1,155 +1,146 @@
 <?php
 
-namespace IcbcSdk\lib;
+namespace Hiworld\LaravelIcbc\lib;
 
 use Exception;
-use IcbcSdk\lib\IcbcEncrypt;
-use IcbcSdk\lib\IcbcSignature;
-use IcbcSdk\lib\WebUtils;
+use Hiworld\LaravelIcbc\lib\IcbcConstants;
+use Hiworld\LaravelIcbc\lib\IcbcSignature;
+use Hiworld\LaravelIcbc\lib\WebUtils;
+use Hiworld\LaravelIcbc\lib\IcbcEncrypt;
 
 class DefaultIcbcClient
 {
-    public $appId;
-    public $privateKey;
-    public $signType;
-    public $charset;
-    public $format;
-    public $icbcPulicKey;
-    public $encryptKey;
-    public $encryptType;
-    public $ca;
-    public $password;
+	public $appId;
+	public $privateKey;
+	public $signType;
+	public $charset;
+	public $format;
+	public $icbcPulicKey;
+	public $encryptKey;
+	public $encryptType;
+	public $ca;
+	public $password;
 
-    public function __construct(
-        string $appId,
-        string $privateKey,
-        ?string $signType = null,
-        ?string $charset = null,
-        ?string $format = null,
-        string $icbcPulicKey,
-        string $encryptKey,
-        string $encryptType,
-        string $ca,
-        string $password
-    ) {
-        $this->appId = $appId;
-        $this->privateKey = $privateKey;
-        $this->signType = $signType ?: IcbcConstants::$SIGN_TYPE_RSA;
-        $this->charset = $charset ?: IcbcConstants::$CHARSET_UTF8;
-        $this->format = $format ?: IcbcConstants::$FORMAT_JSON;
-        $this->icbcPulicKey = $icbcPulicKey;
-        $this->encryptKey = $encryptKey;
-        $this->encryptType = $encryptType;
-        $this->password = $password;
-        
-        // 去除签名数据及证书数据中的空格
-        if (!empty($ca)) {
-            $ca = preg_replace("/\s*|\t/", "", $ca);
-        }
-        $this->ca = $ca;
-    }
+	function __construct($appId, $privateKey, $signType, $charset, $format, $icbcPulicKey,
+		$encryptKey, $encryptType, $ca, $password)
+	{
+		$this->appId = $appId;
+		$this->privateKey = $privateKey;
+		if($signType == null || $signType == ""){
+			$this->signType = IcbcConstants::$SIGN_TYPE_RSA;
+		}else{
+			$this->signType = $signType;
+		}
 
-    /**
-     * 执行请求
-     *
-     * @param array $request
-     * @param string $msgId
-     * @param string|null $appAuthToken
-     * @return mixed
-     * @throws Exception
-     */
-    public function execute(array $request, string $msgId, ?string $appAuthToken = null)
-    {
-        $params = $this->prepareParams($request, $msgId, $appAuthToken);
+		if($charset == null || $charset == ""){
+			$this->charset = IcbcConstants::$CHARSET_UTF8;
+		}else{
+			$this->charset = $charset;
+		}
 
-        if ($request['method'] === 'GET') {
-            $respStr = WebUtils::doGet($request['serviceUrl'], $params, $this->charset);
-        } elseif ($request['method'] === 'POST') {
-            $respStr = WebUtils::doPost($request['serviceUrl'], $params, $this->charset);
-        } else {
-            throw new Exception('Only support GET or POST http method!');
-        }
+		if($format == null || $format == ""){
+			$this->format = IcbcConstants::$FORMAT_JSON;
+		}else{
+			$this->format = $format;
+		}
+		
+		$this->icbcPulicKey = $icbcPulicKey;
+		$this->encryptKey = $encryptKey;
+		$this->encryptType = $encryptType;
+		$this->password = $password;
+		// 去除签名数据及证书数据中的空格
+		if ($ca != null && $ca != "") {
+			$ca = preg_replace("/\s*|\t/", "", $ca);
+		}
+		$this->ca = $ca;
+	}
 
-        $response = json_decode($respStr, true);
-        $respBizContent = $response[IcbcConstants::$RESPONSE_BIZ_CONTENT] ?? null;
-        $sign = $response[IcbcConstants::$SIGN] ?? null;
+	function execute($request, $msgId, $appAuthToken)
+	{
+		$params = $this->prepareParams($request, $msgId, $appAuthToken);
 
-        if (!$respBizContent || !$sign) {
-            throw new Exception('Invalid response format!');
-        }
+		//发送请求
+		//接收响应
+		if($request["method"] == "GET" ){
+			$respStr = WebUtils::doGet($request["serviceUrl"], $params, $this->charset);
+		}elseif ($request["method"] == "POST") {
+			$respStr = WebUtils::doPost($request["serviceUrl"], $params, $this->charset);
+		}else{
+			throw new Exception("Only support GET or POST http method!");
+		}
 
-        // 验证签名
-        $passed = IcbcSignature::verify(
-            json_encode($respBizContent, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            IcbcConstants::$SIGN_TYPE_RSA,
-            $this->icbcPulicKey,
-            $this->charset,
-            $sign
-        );
+		//增加了对传回报文中含有中文字符以及反斜杠的转换
+		$respBizContentStr = json_encode(json_decode($respStr,true)[IcbcConstants::$RESPONSE_BIZ_CONTENT], 320);
+		$sign = json_decode($respStr,true)[IcbcConstants::$SIGN];
+		//解析响应
+		$passed = IcbcSignature::verify($respBizContentStr, IcbcConstants::$SIGN_TYPE_RSA, $this->icbcPulicKey, $this->charset, $sign);
 
-        if (!$passed) {
-            throw new Exception('ICBC sign verify failed!');
-        }
+		if(!$passed){
+			throw new Exception("icbc sign verify not passed!");
+		}
+		if($request["isNeedEncrypt"]){
+			$respBizContentStr = IcbcEncrypt::decryptContent(substr($respBizContentStr, 1 , strlen($respBizContentStr)-2), $this->encryptType, $this->encryptKey, $this->charset);
+		}
+		//返回解析结果
+		return $respBizContentStr;
+	}
 
-        // 如果需要解密
-        if ($request['isNeedEncrypt'] ?? false) {
-            $respBizContent = IcbcEncrypt::decryptContent(
-                substr(json_encode($respBizContent), 1, -1),
-                $this->encryptType,
-                $this->encryptKey,
-                $this->charset
-            );
-        }
+	function prepareParams($request, $msgId, $appAuthToken)
+	{
+		$bizContentStr = json_encode($request["biz_content"]);
 
-        return $respBizContent;
-    }
+		$path = parse_url($request["serviceUrl"], PHP_URL_PATH);
+		
+		$params = array();
 
-    /**
-     * 准备请求参数
-     *
-     * @param array $request
-     * @param string $msgId
-     * @param string|null $appAuthToken
-     * @return array
-     */
-    protected function prepareParams(array $request, string $msgId, ?string $appAuthToken = null): array
-    {
-        $path = parse_url($request['serviceUrl'], PHP_URL_PATH);
-        $params = $request['extraParams'] ?? [];
+		if($request["extraParams"] != null){
+			$params = array_merge($params, $request["extraParams"]);
+		}
 
-        $params[IcbcConstants::$APP_ID] = $this->appId;
-        $params[IcbcConstants::$SIGN_TYPE] = $this->signType;
-        $params[IcbcConstants::$CHARSET] = $this->charset;
-        $params[IcbcConstants::$FORMAT] = $this->format;
-        $params[IcbcConstants::$CA] = $this->ca;
-        $params[IcbcConstants::$APP_AUTH_TOKEN] = $appAuthToken;
-        $params[IcbcConstants::$MSG_ID] = $msgId;
+		$params[IcbcConstants::$APP_ID] = $this->appId;
+		$params[IcbcConstants::$SIGN_TYPE] = $this->signType;
+		$params[IcbcConstants::$CHARSET] = $this->charset;
+		$params[IcbcConstants::$FORMAT] = $this->format;
+		$params[IcbcConstants::$CA] = $this->ca;
+		$params[IcbcConstants::$APP_AUTH_TOKEN] = $appAuthToken;
+		$params[IcbcConstants::$MSG_ID] = $msgId;
 
-        date_default_timezone_set(IcbcConstants::$DATE_TIMEZONE);
-        $params[IcbcConstants::$TIMESTAMP] = date(IcbcConstants::$DATE_TIME_FORMAT);
+		date_default_timezone_set(IcbcConstants::$DATE_TIMEZONE);
+		$params[IcbcConstants::$TIMESTAMP] = date(IcbcConstants::$DATE_TIME_FORMAT);
 
-        $bizContent = json_encode($request['biz_content'] ?? null);
-        if ($request['isNeedEncrypt'] ?? false) {
-            $params[IcbcConstants::$ENCRYPT_TYPE] = $this->encryptType;
-            $params[IcbcConstants::$BIZ_CONTENT_KEY] = IcbcEncrypt::encryptContent(
-                $bizContent,
-                $this->encryptType,
-                $this->encryptKey,
-                $this->charset
-            );
-        } else {
-            $params[IcbcConstants::$BIZ_CONTENT_KEY] = $bizContent;
-        }
+		if ($request["isNeedEncrypt"]){
+			if ($bizContentStr != null) {
+				$params[IcbcConstants::$ENCRYPT_TYPE] = $this->encryptType;
+				$params[IcbcConstants::$BIZ_CONTENT_KEY] = IcbcEncrypt::encryptContent($bizContentStr, $this->encryptType, $this->encryptKey, $this->charset);
+			}
+		} else {
+			$params[IcbcConstants::$BIZ_CONTENT_KEY] = $bizContentStr;
+		}
 
-        $strToSign = WebUtils::buildOrderedSignStr($path, $params);
-        $params[IcbcConstants::$SIGN] = IcbcSignature::sign(
-            $strToSign,
-            $this->signType,
-            $this->privateKey,
-            $this->charset,
-            $this->password
-        );
+		$strToSign = WebUtils::buildOrderedSignStr($path, $params);
 
-        return $params;
-    }
-} 
+		$signedStr = IcbcSignature::sign($strToSign, $this->signType, $this->privateKey, $this->charset, $this->password);
+
+		$params[IcbcConstants::$SIGN] = $signedStr;
+		return $params;
+	}
+
+	function JSONTRANSLATE($array) {
+		foreach ($array as $key => $value){
+			$array[$key] = urlencode($value);
+		}
+		return json_encode($array);
+	}
+
+	function encodeOperations($array) {
+		foreach ((array)$array as $key => $value) {
+			if (is_array($value)) {
+				$this->encodeOperations($array[$key]);
+			} else {
+				$array[$key] = urlencode(mb_convert_encoding($value,'UTF-8','GBK'));
+			}
+		}
+		return $array;
+	}
+}
+?>
