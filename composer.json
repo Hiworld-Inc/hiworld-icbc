@@ -1,0 +1,37 @@
+{
+    "name": "hiworld/laravel-icbc",
+    "description": "ICBC Payment SDK for Laravel",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "IcbcSdk\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Johnson",
+            "email": "john@hiworld.cc"
+        }
+    ],
+    "require": {
+        "php": "^7.3|^8.0",
+        "laravel/framework": "^8.0|^9.0|^10.0",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "ext-curl": "*",
+        "ext-infosec": "*"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "IcbcSdk\\IcbcServiceProvider"
+            ],
+            "aliases": {
+                "IcbcClient": "IcbcSdk\\Facades\\IcbcClient"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+} 
