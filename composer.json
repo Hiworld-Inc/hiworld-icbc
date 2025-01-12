@@ -13,7 +13,18 @@
     "autoload": {
         "psr-4": {
             "Hiworld\\LaravelIcbc\\": "src/"
-        }
+        },
+        "files": [
+            "../AES.php",
+            "../DefaultIcbcClient.php",
+            "../IcbcCa.php",
+            "../IcbcConstants.php",
+            "../IcbcEncrypt.php",
+            "../IcbcSignature.php",
+            "../RSA.php",
+            "../UiIcbcClient.php",
+            "../WebUtils.php"
+        ]
     },
     "authors": [
         {

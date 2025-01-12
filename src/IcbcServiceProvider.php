@@ -1,9 +1,9 @@
 <?php
 
-namespace IcbcSdk;
+namespace Hiworld\LaravelIcbc;
 
 use Illuminate\Support\ServiceProvider;
-use IcbcSdk\Services\IcbcService;
+use Hiworld\LaravelIcbc\Services\IcbcService;
 
 class IcbcServiceProvider extends ServiceProvider
 {
