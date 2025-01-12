@@ -62,10 +62,15 @@ class IcbcService
         // 移除所有非 base64 字符
         $privateKey = preg_replace('/[^A-Za-z0-9+\/=]/', '', $privateKey);
 
+        // 验证 base64 字符串
+        if (!$this->isValidBase64($privateKey)) {
+            throw new \Exception('Invalid base64 format for private key');
+        }
+
         // 添加 PEM 格式头尾
-        return "-----BEGIN PRIVATE KEY-----\n" .
+        return "-----BEGIN RSA PRIVATE KEY-----\n" .
             chunk_split($privateKey, 64, "\n") .
-            "-----END PRIVATE KEY-----";
+            "-----END RSA PRIVATE KEY-----";
     }
 
     /**
@@ -104,6 +109,11 @@ class IcbcService
         // 移除所有非 base64 字符
         $publicKey = preg_replace('/[^A-Za-z0-9+\/=]/', '', $publicKey);
 
+        // 验证 base64 字符串
+        if (!$this->isValidBase64($publicKey)) {
+            throw new \Exception('Invalid base64 format for public key');
+        }
+
         // 添加 PEM 格式头尾
         return "-----BEGIN PUBLIC KEY-----\n" .
             chunk_split($publicKey, 64, "\n") .
@@ -132,6 +142,34 @@ class IcbcService
         }
         
         return $key;
+    }
+
+    /**
+     * 验证是否为有效的 base64 字符串
+     *
+     * @param string $str
+     * @return bool
+     */
+    protected function isValidBase64($str)
+    {
+        // 检查长度是否为4的倍数
+        if (strlen($str) % 4 !== 0) {
+            return false;
+        }
+
+        // 检查是否包含有效的 base64 字符
+        if (!preg_match('/^[A-Za-z0-9+\/]+={0,2}$/', $str)) {
+            return false;
+        }
+
+        // 尝试解码
+        $decoded = base64_decode($str, true);
+        if ($decoded === false) {
+            return false;
+        }
+
+        // 重新编码并比较
+        return base64_encode($decoded) === $str;
     }
 
     /**
