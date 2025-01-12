@@ -14,16 +14,48 @@ class IcbcService
         $this->config = $config;
         $this->client = new DefaultIcbcClient(
             $config['app_id'],
-            $config['private_key'],
+            $this->formatPrivateKey($config['private_key']),
             $config['sign_type'],
             $config['charset'],
             $config['format'],
-            $config['icbc_public_key'],
+            $this->formatPublicKey($config['icbc_public_key']),
             $config['encrypt_key'],
             $config['encrypt_type'],
             $config['ca'],
             $config['password']
         );
+    }
+
+    /**
+     * 格式化私钥
+     *
+     * @param string $privateKey
+     * @return string
+     */
+    protected function formatPrivateKey($privateKey)
+    {
+        if (strpos($privateKey, '-----BEGIN PRIVATE KEY-----') === false) {
+            $privateKey = "-----BEGIN PRIVATE KEY-----\n" .
+                wordwrap($privateKey, 64, "\n", true) .
+                "\n-----END PRIVATE KEY-----";
+        }
+        return $privateKey;
+    }
+
+    /**
+     * 格式化公钥
+     *
+     * @param string $publicKey
+     * @return string
+     */
+    protected function formatPublicKey($publicKey)
+    {
+        if (strpos($publicKey, '-----BEGIN PUBLIC KEY-----') === false) {
+            $publicKey = "-----BEGIN PUBLIC KEY-----\n" .
+                wordwrap($publicKey, 64, "\n", true) .
+                "\n-----END PUBLIC KEY-----";
+        }
+        return $publicKey;
     }
 
     /**
