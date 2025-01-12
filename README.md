@@ -37,8 +37,7 @@ ICBC_SANDBOX=true  # 设置为 false 以使用生产环境
 ### 方法 1：使用 Facade
 
 ```php
-use IcbcSdk\Facades\IcbcClient;
-
+use Hiworld\LaravelIcbc\Facades\IcbcClient;
 // 支付
 $result = IcbcClient::pay([
     'order_no' => '123456',
@@ -66,7 +65,7 @@ $result = IcbcClient::cancel([
 ### 方法 2：使用依赖注入
 
 ```php
-use IcbcSdk\Services\IcbcService;
+use Hiworld\LaravelIcbc\Services\IcbcService;
 
 class PaymentController extends Controller
 {

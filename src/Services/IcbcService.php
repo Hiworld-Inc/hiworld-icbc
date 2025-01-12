@@ -12,6 +12,21 @@ class IcbcService
     public function __construct(array $config)
     {
         $this->config = $config;
+
+        // 验证必需的配置项
+        if (empty($config['app_id'])) {
+            throw new \Exception('ICBC app_id is required');
+        }
+        if (empty($config['private_key'])) {
+            throw new \Exception('ICBC private_key is required');
+        }
+        if (empty($config['icbc_public_key'])) {
+            throw new \Exception('ICBC public_key is required');
+        }
+        if (empty($config['sign_type'])) {
+            throw new \Exception('ICBC sign_type is required');
+        }
+
         try {
             $this->client = new DefaultIcbcClient(
                 $config['app_id'],
@@ -272,11 +287,8 @@ class IcbcService
      */
     public function execute(array $request, string $msgId, ?string $appAuthToken = null)
     {
-        // 处理API地址
-        $gateway = $this->config['sandbox'] ? 
-            str_replace('gw.', 'gw.test.', $this->config['gateway']) : 
-            $this->config['gateway'];
-            
+        // 根据环境选择对应的网关地址
+        $gateway = $this->config['sandbox'] ? $this->config['sandbox_gateway'] : $this->config['gateway'];
         $request['serviceUrl'] = $gateway . $request['api'];
         
         return $this->client->execute($request, $msgId, $appAuthToken);
