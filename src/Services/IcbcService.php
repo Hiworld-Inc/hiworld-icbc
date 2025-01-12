@@ -42,7 +42,8 @@ class IcbcService
                 'timestamp' => date('YmdHis'),
                 'currency' => 'CNY',
             ], $params),
-            'isNeedEncrypt' => false
+            'isNeedEncrypt' => false,
+            'extraParams' => []
         ];
 
         return $this->execute($request, uniqid());
@@ -63,7 +64,8 @@ class IcbcService
                 'mer_id' => $this->config['app_id'],
                 'timestamp' => date('YmdHis'),
             ], $params),
-            'isNeedEncrypt' => false
+            'isNeedEncrypt' => false,
+            'extraParams' => []
         ];
 
         return $this->execute($request, uniqid());
@@ -85,7 +87,8 @@ class IcbcService
                 'timestamp' => date('YmdHis'),
                 'currency' => 'CNY',
             ], $params),
-            'isNeedEncrypt' => false
+            'isNeedEncrypt' => false,
+            'extraParams' => []
         ];
 
         return $this->execute($request, uniqid());
@@ -106,7 +109,8 @@ class IcbcService
                 'mer_id' => $this->config['app_id'],
                 'timestamp' => date('YmdHis'),
             ], $params),
-            'isNeedEncrypt' => false
+            'isNeedEncrypt' => false,
+            'extraParams' => []
         ];
 
         return $this->execute($request, uniqid());
