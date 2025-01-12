@@ -12,18 +12,22 @@ class IcbcService
     public function __construct(array $config)
     {
         $this->config = $config;
-        $this->client = new DefaultIcbcClient(
-            $config['app_id'],
-            $this->formatPrivateKey($config['private_key']),
-            $config['sign_type'],
-            $config['charset'],
-            $config['format'],
-            $this->formatPublicKey($config['icbc_public_key']),
-            $config['encrypt_key'],
-            $config['encrypt_type'],
-            $config['ca'],
-            $config['password']
-        );
+        try {
+            $this->client = new DefaultIcbcClient(
+                $config['app_id'],
+                $this->formatPrivateKey($config['private_key']),
+                $config['sign_type'],
+                $config['charset'],
+                $config['format'],
+                $this->formatPublicKey($config['icbc_public_key']),
+                $config['encrypt_key'],
+                $config['encrypt_type'],
+                $config['ca'],
+                $config['password']
+            );
+        } catch (\Exception $e) {
+            throw new \Exception('Failed to initialize ICBC client: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -47,62 +51,42 @@ class IcbcService
             }
         }
 
-        // 如果已经是PEM格式，直接返回
-        if (strpos($privateKey, '-----BEGIN RSA PRIVATE KEY-----') !== false) {
-            $res = @openssl_pkey_get_private($privateKey);
+        // 清理密钥内容
+        $privateKey = $this->cleanKeyContent($privateKey);
+
+        // 尝试直接验证原始密钥
+        $res = @openssl_pkey_get_private($privateKey);
+        if ($res) {
+            openssl_pkey_free($res);
+            return $privateKey;
+        }
+
+        // 尝试不同的密钥格式
+        $formats = [
+            ["-----BEGIN PRIVATE KEY-----\n", "\n-----END PRIVATE KEY-----"],
+            ["-----BEGIN RSA PRIVATE KEY-----\n", "\n-----END RSA PRIVATE KEY-----"],
+            ["-----BEGIN ENCRYPTED PRIVATE KEY-----\n", "\n-----END ENCRYPTED PRIVATE KEY-----"]
+        ];
+
+        foreach ($formats as $format) {
+            $pem = $format[0] . chunk_split($privateKey, 64, "\n") . $format[1];
+            $res = @openssl_pkey_get_private($pem);
             if ($res) {
                 openssl_pkey_free($res);
-                return $privateKey;
+                return $pem;
             }
         }
 
-        // 如果是PKCS#8格式，直接返回
-        if (strpos($privateKey, '-----BEGIN PRIVATE KEY-----') !== false) {
-            $res = @openssl_pkey_get_private($privateKey);
-            if ($res) {
-                openssl_pkey_free($res);
-                return $privateKey;
-            }
-        }
-
-        // 移除所有空白字符
-        $privateKey = preg_replace('/\s+/', '', $privateKey);
-        
-        // 移除现有的 PEM 头尾
-        $privateKey = preg_replace('/-+BEGIN.*KEY-+/', '', $privateKey);
-        $privateKey = preg_replace('/-+END.*KEY-+/', '', $privateKey);
-
-        // 确保是有效的 base64
-        if (!preg_match('/^[a-zA-Z0-9\/+]*={0,2}$/', $privateKey)) {
-            throw new \Exception('Private key is not a valid base64 string');
-        }
-
-        // 尝试 PKCS#8 格式
-        $pem = "-----BEGIN PRIVATE KEY-----\n" .
-            chunk_split($privateKey, 64, "\n") .
-            "-----END PRIVATE KEY-----";
-
-        $res = @openssl_pkey_get_private($pem);
-        if ($res) {
-            openssl_pkey_free($res);
-            return $pem;
-        }
-
-        // 尝试 RSA 格式
-        $pem = "-----BEGIN RSA PRIVATE KEY-----\n" .
-            chunk_split($privateKey, 64, "\n") .
-            "-----END RSA PRIVATE KEY-----";
-
-        $res = @openssl_pkey_get_private($pem);
-        if ($res) {
-            openssl_pkey_free($res);
-            return $pem;
-        }
-
-        // 获取 OpenSSL 错误信息
+        // 如果所有尝试都失败，记录错误并抛出异常
         $errors = [];
         while ($error = openssl_error_string()) {
             $errors[] = $error;
+        }
+
+        // 尝试解码 base64 看看是否有效
+        $decoded = base64_decode($privateKey, true);
+        if ($decoded === false) {
+            throw new \Exception('Private key is not a valid base64 string');
         }
 
         throw new \Exception('Invalid private key format. OpenSSL errors: ' . implode('; ', $errors));
@@ -129,25 +113,14 @@ class IcbcService
             }
         }
 
-        // 如果已经是PEM格式，直接返回
-        if (strpos($publicKey, '-----BEGIN PUBLIC KEY-----') !== false) {
-            $res = @openssl_pkey_get_public($publicKey);
-            if ($res) {
-                openssl_pkey_free($res);
-                return $publicKey;
-            }
-        }
+        // 清理密钥内容
+        $publicKey = $this->cleanKeyContent($publicKey);
 
-        // 移除所有空白字符
-        $publicKey = preg_replace('/\s+/', '', $publicKey);
-        
-        // 移除现有的 PEM 头尾
-        $publicKey = preg_replace('/-+BEGIN.*KEY-+/', '', $publicKey);
-        $publicKey = preg_replace('/-+END.*KEY-+/', '', $publicKey);
-
-        // 确保是有效的 base64
-        if (!preg_match('/^[a-zA-Z0-9\/+]*={0,2}$/', $publicKey)) {
-            throw new \Exception('Public key is not a valid base64 string');
+        // 尝试直接验证原始密钥
+        $res = @openssl_pkey_get_public($publicKey);
+        if ($res) {
+            openssl_pkey_free($res);
+            return $publicKey;
         }
 
         // 格式化为 PEM 格式
@@ -167,6 +140,30 @@ class IcbcService
         openssl_pkey_free($res);
 
         return $pem;
+    }
+
+    /**
+     * 清理密钥内容
+     *
+     * @param string $key
+     * @return string
+     */
+    protected function cleanKeyContent($key)
+    {
+        // 移除 UTF-8 BOM
+        $key = str_replace("\xEF\xBB\xBF", '', $key);
+        
+        // 统一换行符
+        $key = str_replace(["\r\n", "\r"], "\n", $key);
+        
+        // 如果不是 PEM 格式，移除所有空白字符
+        if (strpos($key, '-----BEGIN') === false) {
+            $key = preg_replace('/\s+/', '', $key);
+            // 移除可能存在的 PEM 头尾
+            $key = preg_replace('/-+[^-]+-+/', '', $key);
+        }
+        
+        return $key;
     }
 
     /**
