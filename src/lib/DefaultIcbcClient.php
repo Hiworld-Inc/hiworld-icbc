@@ -73,7 +73,7 @@ class DefaultIcbcClient
 		$respBizContentStr = json_encode(json_decode($respStr,true)[IcbcConstants::$RESPONSE_BIZ_CONTENT], 320);
 		$sign = json_decode($respStr,true)[IcbcConstants::$SIGN];
 		//解析响应
-		$passed = IcbcSignature::verify($respBizContentStr, IcbcConstants::$SIGN_TYPE_RSA, $this->icbcPulicKey, $this->charset, $sign);
+		$passed = IcbcSignature::verify($respBizContentStr, $this->signType, $this->icbcPulicKey, $this->charset, $sign);
 
 		if(!$passed){
 			throw new Exception("icbc sign verify not passed!");
