@@ -58,6 +58,7 @@ class DefaultIcbcClient
 	function execute($request, $msgId, $appAuthToken)
 	{
 		$params = $this->prepareParams($request, $msgId, $appAuthToken);
+		error_log("Request params: " . json_encode($params));
 
 		//发送请求
 		//接收响应
@@ -68,10 +69,16 @@ class DefaultIcbcClient
 		}else{
 			throw new Exception("Only support GET or POST http method!");
 		}
+		error_log("Response string: " . $respStr);
 
 		//增加了对传回报文中含有中文字符以及反斜杠的转换
 		$respBizContentStr = json_encode(json_decode($respStr,true)[IcbcConstants::$RESPONSE_BIZ_CONTENT], 320);
 		$sign = json_decode($respStr,true)[IcbcConstants::$SIGN];
+		error_log("Response biz content: " . $respBizContentStr);
+		error_log("Response sign: " . $sign);
+		error_log("Sign type: " . $this->signType);
+		error_log("Public key: " . substr($this->icbcPulicKey, 0, 64) . "...");
+
 		//解析响应
 		$passed = IcbcSignature::verify($respBizContentStr, $this->signType, $this->icbcPulicKey, $this->charset, $sign);
 
