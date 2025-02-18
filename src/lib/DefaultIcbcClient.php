@@ -78,9 +78,10 @@ class DefaultIcbcClient
 		error_log("Response sign: " . $sign);
 		error_log("Sign type: " . $this->signType);
 		error_log("Public key: " . substr($this->icbcPulicKey, 0, 64) . "...");
+		error_log("Password: " . ($this->password ? "Set" : "Not Set"));
 
 		//解析响应
-		$passed = IcbcSignature::verify($respBizContentStr, $this->signType, $this->icbcPulicKey, $this->charset, $sign);
+		$passed = IcbcSignature::verify($respBizContentStr, $this->signType, $this->icbcPulicKey, $this->charset, $sign, $this->password);
 
 		if(!$passed){
 			throw new Exception("icbc sign verify not passed!");
