@@ -44,5 +44,5 @@ return [
     'gateway' => env('ICBC_GATEWAY', 'https://gw.open.icbc.com.cn'),
 
     // 测试环境网关
-    'sandbox_gateway' => env('ICBC_SANDBOX_GATEWAY', 'https://apipcs.dccnet.com.cn'),
+    'sandbox_gateway' => env('ICBC_SANDBOX_GATEWAY', 'https://apipcs3.dccnet.com.cn'),
 ]; 
